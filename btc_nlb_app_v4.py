@@ -61,10 +61,10 @@ GENESIS = pd.Timestamp('2009-01-03')
 
 # Force dark theme for plotly charts in Streamlit
 CHART_LAYOUT = dict(
-    template='plotly_white',
-    paper_bgcolor='white',
-    plot_bgcolor='white',
-    font=dict(color='#333'),
+    template='plotly_dark',
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(14,17,23,1)',
+    font=dict(color='#ccc'),
 )
 
 # ============================================================================
@@ -508,14 +508,14 @@ def main():
         fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], name='BTC Price',
                                  line=dict(color='#F7931A', width=1.2), opacity=0.6))
         fig.add_trace(go.Scatter(x=df['Date'], y=df['NLB'], name='NLB (staircase)',
-                                 line=dict(color='#0d47a1', width=2.5, shape='hv')))
+                                 line=dict(color='#00e5ff', width=2.5, shape='hv')))
         fig.add_trace(go.Scatter(x=df['Date'], y=df['Ceiling'], name='Ceiling',
-                                 line=dict(color='rgba(220,53,69,0.5)', width=1.2)))
+                                 line=dict(color='rgba(220,53,69,0.4)', width=1.2)))
         fig.add_trace(go.Scatter(x=df['Date'], y=df['Floor'], name='Floor',
                                  line=dict(color='#28a745', width=2),
                                  fill='tonexty', fillcolor='rgba(247,147,26,0.04)'))
         fig.add_trace(go.Scatter(x=df['Date'], y=df['Balanced'], name='Balanced (Fair Value)',
-                                 line=dict(color='#757575', width=1.5, dash='dash')))
+                                 line=dict(color='#adb5bd', width=1.5, dash='dash')))
         fig.add_trace(go.Scatter(x=df['Date'], y=df['MaxCross'], name='Max-Crossing',
                                  line=dict(color='#42a5f5', width=1.5, dash='dot')))
         for col, clr in [('Floor','rgba(40,167,69,0.35)'),('Balanced','rgba(173,181,189,0.35)'),
@@ -527,7 +527,7 @@ def main():
         fig.update_layout(yaxis_type='log', yaxis_title='USD (log scale)', height=580,
                           hovermode='x unified', **CHART_LAYOUT,
                           legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01,
-                                      font=dict(size=11, color='#333')),
+                                      font=dict(size=11, color='#ccc')),
                           margin=dict(l=0, r=0, t=30, b=0))
         fig.update_yaxes(range=[np.log10(y_lo), np.log10(y_hi)])
         st.plotly_chart(fig, use_container_width=True)
@@ -594,14 +594,14 @@ def main():
         fig_r.add_trace(go.Scatter(x=df['Date'], y=df['Close'], name='Price',
                                    line=dict(color='#F7931A', width=1.5)), row=1, col=1)
         fig_r.add_trace(go.Scatter(x=df['Date'], y=df['Balanced'], name='Balanced',
-                                   line=dict(color='#757575', width=1.5, dash='dash')), row=1, col=1)
+                                   line=dict(color='#adb5bd', width=1.5, dash='dash')), row=1, col=1)
         fig_r.add_trace(go.Scatter(x=df['Date'], y=df['Floor'], name='Floor',
                                    line=dict(color='#28a745', width=1, dash='dot')), row=1, col=1)
         fig_r.add_trace(go.Scatter(x=df['Date'], y=df['RiskArea'], name='Risk Area',
                                    line=dict(color='#6f42c1', width=1.2),
                                    fill='tozeroy', fillcolor='rgba(111,66,193,0.08)'), row=2, col=1)
         fig_r.add_trace(go.Scatter(x=df['Date'], y=df['RiskRMax'], name='Rolling Max',
-                                   line=dict(color='rgba(100,100,100,0.4)', width=1, dash='dot')),
+                                   line=dict(color='rgba(255,255,255,0.25)', width=1, dash='dot')),
                         row=2, col=1)
         fig_r.add_trace(go.Scatter(x=df['Date'], y=df['RiskRatio']*100, name='Risk %',
                                    line=dict(color='#dc3545', width=1.5),
