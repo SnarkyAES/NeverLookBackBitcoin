@@ -54,18 +54,11 @@ st.markdown("""<style>
 .sig-orange{background:linear-gradient(135deg,#7c2d12,#ea580c);color:white;padding:1rem;border-radius:10px;text-align:center;font-size:1.2rem;font-weight:bold;}
 .sig-red{background:linear-gradient(135deg,#7f1d1d,#dc2626);color:white;padding:1rem;border-radius:10px;text-align:center;font-size:1.2rem;font-weight:bold;}
 .sig-gray{background:linear-gradient(135deg,#495057,#6c757d);color:white;padding:1rem;border-radius:10px;text-align:center;font-size:1.2rem;font-weight:bold;}
-
+.explain{background:rgba(247,147,26,0.08);border-left:4px solid #F7931A;padding:1rem;border-radius:5px;margin:0.5rem 0;font-size:0.9rem;color:#e0e0e0;}
+.explain b{color:#F7931A;}
 </style>""", unsafe_allow_html=True)
 
 GENESIS = pd.Timestamp('2009-01-03')
-
-# Force dark theme for plotly charts in Streamlit
-CHART_LAYOUT = dict(
-    template='plotly_dark',
-    paper_bgcolor='rgba(0,0,0,0)',
-    plot_bgcolor='rgba(14,17,23,1)',
-    font=dict(color='#ccc'),
-)
 
 # ============================================================================
 # DATA
@@ -418,12 +411,10 @@ def main():
     with st.sidebar:
         st.title("⚙️ Settings")
         st.markdown("---")
-        start_year = st.selectbox("📅 Start Year", [2010, 2011, 2012, 2013, 2014], index=0)
         proj_years = st.slider("📐 Projection (years)", 1, 5, 3)
         st.markdown("---")
         st.markdown("### 🔬 Risk Area")
         risk_lam = st.slider("Decay λ", 0.990, 0.999, 0.995, 0.001,
-                              format="%.3f",
                               help="0.995 ≈ 139-day half-life. 0.997 ≈ 231 days.")
         risk_win = st.slider("Norm. window", 180, 730, 365, 30)
         st.markdown("---")
@@ -445,7 +436,7 @@ def main():
 
     # Load & build
     with st.spinner("📥 Loading BTC data…"):
-        raw = load_btc(f'{start_year}-01-01')
+        raw = load_btc('2010-07-18')
         if raw is None or len(raw) < 100:
             st.error("Failed to load data"); return
 
@@ -497,45 +488,48 @@ def main():
 
     # ── TAB 1: NLB CHANNEL ─────────────────────────────────────────
     with tab1:
-        st.info("**Chart:** BTC price (orange), NLB staircase (cyan, step-shaped), "
-                "and the power law channel. The NLB rises in steps — each step is a new "
-                "\"never look back\" level. Floor (green) stays below ALL NLB points by construction. "
-                "Balanced (gray dashed) is the log-median. Ceiling (red) is the symmetric upper bound. "
-                "Max-Cross (blue dotted) = dynamic support/resistance.")
+        st.markdown('<div class="explain">'
+                    '<b>Chart:</b> BTC price (orange), NLB staircase (white, shape=hv), '
+                    'and the power law channel. The NLB rises in steps — each step is a new '
+                    '"never look back" level. Floor (green) stays below ALL NLB points by construction. '
+                    'Balanced (gray dashed) is the log-median. Ceiling (red) is the symmetric upper bound.'
+                    '</div>', unsafe_allow_html=True)
 
         proj = project_curves(M, proj_years)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], name='BTC Price',
                                  line=dict(color='#F7931A', width=1.2), opacity=0.6))
-        fig.add_trace(go.Scatter(x=df['Date'], y=df['NLB'], name='NLB (staircase)',
-                                 line=dict(color='#00e5ff', width=2.5, shape='hv')))
+        fig.add_trace(go.Scatter(x=df['Date'], y=df['NLB'], name='NLB',
+                                 line=dict(color='white', width=2.5, shape='hv')))
         fig.add_trace(go.Scatter(x=df['Date'], y=df['Ceiling'], name='Ceiling',
-                                 line=dict(color='rgba(220,53,69,0.4)', width=1.2)))
+                                 line=dict(color='rgba(220,53,69,0.35)', width=1)))
         fig.add_trace(go.Scatter(x=df['Date'], y=df['Floor'], name='Floor',
                                  line=dict(color='#28a745', width=2),
                                  fill='tonexty', fillcolor='rgba(247,147,26,0.04)'))
-        fig.add_trace(go.Scatter(x=df['Date'], y=df['Balanced'], name='Balanced (Fair Value)',
+        fig.add_trace(go.Scatter(x=df['Date'], y=df['Balanced'], name='Balanced',
                                  line=dict(color='#adb5bd', width=1.5, dash='dash')))
-        fig.add_trace(go.Scatter(x=df['Date'], y=df['MaxCross'], name='Max-Crossing',
-                                 line=dict(color='#42a5f5', width=1.5, dash='dot')))
+        fig.add_trace(go.Scatter(x=df['Date'], y=df['MaxCross'], name='Max-Cross',
+                                 line=dict(color='#17a2b8', width=1, dash='dot'),
+                                 visible='legendonly'))
         for col, clr in [('Floor','rgba(40,167,69,0.35)'),('Balanced','rgba(173,181,189,0.35)'),
                           ('Ceiling','rgba(220,53,69,0.2)')]:
             fig.add_trace(go.Scatter(x=proj['Date'], y=proj[col], showlegend=False,
                                      line=dict(color=clr, width=1, dash='dot')))
         y_hi = max(float(pr.max()), float(proj['Ceiling'].max())) * 2
         y_lo = max(float(fl_v.min()), 0.001)
-        fig.update_layout(yaxis_type='log', yaxis_title='USD (log scale)', height=580,
-                          hovermode='x unified', **CHART_LAYOUT,
-                          legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01,
-                                      font=dict(size=11, color='#ccc')),
+        fig.update_layout(yaxis_type='log', yaxis_title='USD (log)', height=580,
+                          hovermode='x unified', template='plotly_dark',
+                          legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, font_size=11),
                           margin=dict(l=0, r=0, t=30, b=0))
         fig.update_yaxes(range=[np.log10(y_lo), np.log10(y_hi)])
         st.plotly_chart(fig, use_container_width=True)
 
         # Channel position
         st.markdown("#### Channel Position History")
-        st.info("0% = NLB at floor (cheap). 100% = NLB at ceiling (expensive). "
-                "Green zone < 30%. Red zone > 70%.")
+        st.markdown('<div class="explain">'
+                    '0% = NLB at floor (cheap). 100% = NLB at ceiling (expensive). '
+                    'Green zone < 30%. Red zone > 70%.'
+                    '</div>', unsafe_allow_html=True)
         fig_ch = go.Figure()
         fig_ch.add_trace(go.Scatter(x=df['Date'], y=df['ChPos']*100, name='Channel %',
                                     line=dict(color='#F7931A', width=1.5),
@@ -544,7 +538,7 @@ def main():
         fig_ch.add_hrect(y0=70, y1=100, fillcolor='rgba(220,53,69,0.06)', line_width=0)
         fig_ch.add_hline(y=70, line_dash='dash', line_color='red', opacity=0.4)
         fig_ch.add_hline(y=30, line_dash='dash', line_color='green', opacity=0.4)
-        fig_ch.update_layout(yaxis_title='Channel %', height=280, **CHART_LAYOUT,
+        fig_ch.update_layout(yaxis_title='Channel %', height=280, template='plotly_dark',
                              hovermode='x unified', margin=dict(l=0, r=0, t=10, b=0))
         fig_ch.update_yaxes(range=[0, 100])
         st.plotly_chart(fig_ch, use_container_width=True)
@@ -577,14 +571,17 @@ def main():
     # ── TAB 2: RISK AREA ──────────────────────────────────────────
     with tab2:
         hl = abs(int(np.log(0.5) / np.log(risk_lam)))
-        st.info(
-            f"**Risk Area** now measures excess above **BALANCED** (fair value), not Floor. "
-            f"Being below balanced = low risk. Being above = risk accumulates.\n\n"
-            f"**Formula:** area(t) = area(t-1) × {risk_lam} + max(0, log(price/balanced))\n\n"
-            f"**Half-life:** {hl} days · **Current Risk:** {RR*100:.0f}% · "
-            f"**Price vs Balanced:** {D_BL:+.1f}% "
-            f"{'(BELOW → no excess)' if D_BL < 0 else '(ABOVE → accumulating)'}"
-        )
+        st.markdown('<div class="explain">'
+                    '<b>v3 Change:</b> Risk Area now measures excess above <b>BALANCED</b> (fair value), '
+                    'not above Floor. This makes more sense: being at $90k when balanced is $149k '
+                    'means you are BELOW fair value → low risk. Being at $200k when balanced is $149k '
+                    'means high excess → high risk.<br><br>'
+                    f'<b>Formula:</b> area(t) = area(t-1) × {risk_lam} + max(0, log(price/balanced))<br>'
+                    f'<b>Half-life:</b> {hl} days<br>'
+                    f'<b>Current Risk:</b> {RR*100:.0f}%<br>'
+                    f'<b>Price vs Balanced:</b> {D_BL:+.1f}% '
+                    f'{"(BELOW fair value → no excess accumulating)" if D_BL < 0 else "(ABOVE → excess accumulating)"}'
+                    '</div>', unsafe_allow_html=True)
 
         fig_r = make_subplots(
             rows=3, cols=1, shared_xaxes=True, row_heights=[0.4, 0.25, 0.35],
@@ -612,7 +609,7 @@ def main():
                         line_width=0, row=3, col=1)
         fig_r.add_hline(y=70, line_dash='dash', line_color='red', opacity=0.4, row=3, col=1)
         fig_r.add_hline(y=30, line_dash='dash', line_color='green', opacity=0.4, row=3, col=1)
-        fig_r.update_layout(height=700, **CHART_LAYOUT, hovermode='x unified',
+        fig_r.update_layout(height=700, template='plotly_dark', hovermode='x unified',
                             margin=dict(l=0, r=0, t=40, b=0))
         fig_r.update_yaxes(type='log', title_text='USD', row=1, col=1)
         fig_r.update_yaxes(title_text='Area', row=2, col=1)
@@ -621,9 +618,11 @@ def main():
 
         # Backtest
         st.markdown("#### 🔬 Risk Area Backtest")
-        st.info("Walk-forward: for each historical day, risk is computed with past-only data, "
-                "then we measure what happened next. If the indicator works, high-risk buckets "
-                "should show worse forward returns than low-risk buckets.")
+        st.markdown('<div class="explain">'
+                    'Walk-forward: for each historical day, risk is computed with past-only data, '
+                    'then we measure what happened next. If the indicator works, high-risk buckets '
+                    'should show worse forward returns than low-risk buckets.'
+                    '</div>', unsafe_allow_html=True)
         with st.spinner("Running backtest…"):
             bt = backtest_risk_area(pr, bl_v, risk_lam, risk_win)
         if len(bt) > 0:
@@ -642,16 +641,16 @@ def main():
                                            mode='lines+markers', line=dict(color='#17a2b8')))
                 fig_c.add_vline(x=bl_, line_dash='dash', line_color='#28a745')
                 fig_c.update_layout(xaxis_title='λ', yaxis_title='Separation', height=300,
-                                    **CHART_LAYOUT)
+                                    template='plotly_dark')
                 st.plotly_chart(fig_c, use_container_width=True)
 
     # ── TAB 3: PROBABILITIES ───────────────────────────────────────
     with tab3:
-        st.info(
-            f"**Method:** Find all historical days when channel position ≈ today "
-            f"({CH*100:.1f}% ± 7%). Track minimum price over next N days. "
-            f"Count how often each target was reached. Purely empirical — no model."
-        )
+        st.markdown('<div class="explain">'
+                    '<b>Method:</b> Find all historical days when channel position ≈ today '
+                    f'({CH*100:.1f}% ± 7%). Track minimum price over next N days. '
+                    'Count how often each target was reached. Purely empirical — no model.'
+                    '</div>', unsafe_allow_html=True)
 
         prob_df, n_sim = hist_prob_table(pr, chp, fl_v, bl_v, CH, tol=0.07)
         if prob_df is not None and len(prob_df) > 0:
@@ -681,8 +680,10 @@ def main():
 
     # ── TAB 4: ENTRY STRATEGY ─────────────────────────────────────
     with tab4:
-        st.info("Combines channel position, risk, and historical probabilities "
-                "to evaluate entry levels and suggest a DCA plan.")
+        st.markdown('<div class="explain">'
+                    'Combines channel position, risk, and historical probabilities '
+                    'to evaluate entry levels and suggest a DCA plan.'
+                    '</div>', unsafe_allow_html=True)
 
         sc1, sc2 = st.columns(2)
         budget = sc1.number_input("💰 Budget (€)", 100, 10_000_000, 10_000, 1000)
@@ -762,14 +763,14 @@ def main():
 
     # ── TAB 5: DEBUG DATA ─────────────────────────────────────────
     with tab5:
-        st.info(
-            "**Debug & Verification.** Download all computed data to check calculations.\n\n"
-            "**Columns:** Date, Days (since genesis), Close, Low, NLB, NLB_Update (1=step up), "
-            "Floor, Balanced, Ceiling, MaxCross, ChPos (0-1), "
-            "DistBal (log distance to balanced, negative=below), "
-            "Excess (daily max(0,log(price/balanced))), "
-            "RiskArea (decayed sum), RiskRMax (rolling max), RiskRatio (0-1)."
-        )
+        st.markdown('<div class="explain">'
+                    '<b>Debug & Verification.</b> Download all computed data to check calculations.<br>'
+                    '<b>Columns:</b> Date, Days (since genesis), Close, Low, NLB, NLB_Update (1=step up), '
+                    'Floor, Balanced, Ceiling, MaxCross, ChPos (0-1), '
+                    'DistBal (log distance to balanced, negative=below), '
+                    'Excess (daily max(0,log(price/balanced))), '
+                    'RiskArea (decayed sum), RiskRMax (rolling max), RiskRatio (0-1).'
+                    '</div>', unsafe_allow_html=True)
 
         export = df[['Date','Days','Close','Low','NLB','Floor','Balanced','Ceiling',
                       'MaxCross','ChPos','DistBal','Excess','RiskArea','RiskRMax','RiskRatio']].copy()
